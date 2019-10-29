@@ -38,6 +38,9 @@ import java.util.concurrent.ConcurrentMap;
 
 public class AnnotationBean extends ServiceInitializeListener implements DisposableBean,
 		BeanFactoryPostProcessor, BeanPostProcessor, ApplicationContextAware {
+	// 注解扫描包，默认是com.dianping,在Spring进行初始化时，会根据配置进行覆盖
+	// 如对于配置`<pigeon:annotation package="com.dianping.pigeon.demo.annotation"/>`
+	// 会覆盖成{"com.dianping.pigeon.demo.annotation"}
 
 	private static final Logger logger = LoggerLoader.getLogger(AnnotationBean.class);
 
@@ -70,12 +73,14 @@ public class AnnotationBean extends ServiceInitializeListener implements Disposa
 		}
 		if (beanFactory instanceof BeanDefinitionRegistry) {
 			try {
+				// 加载类，并初始化扫描器
 				// init scanner
 				Class<?> scannerClass = ClassUtils
 						.loadClass("org.springframework.context.annotation.ClassPathBeanDefinitionScanner");
 				Object scanner = scannerClass.getConstructor(
 						new Class<?>[] { BeanDefinitionRegistry.class, boolean.class }).newInstance(
 						new Object[] { (BeanDefinitionRegistry) beanFactory, true });
+				// scanner.addIncludeFilter(new AnnotationTypeFilter(Service.class)), 即添加支持Service注解扫描
 				// add filter
 				Class<?> filterClass = ClassUtils
 						.loadClass("org.springframework.core.type.filter.AnnotationTypeFilter");
@@ -84,6 +89,7 @@ public class AnnotationBean extends ServiceInitializeListener implements Disposa
 						ClassUtils.loadClass("org.springframework.core.type.filter.TypeFilter"));
 				addIncludeFilter.invoke(scanner, filter);
 				// scan packages
+				// 调用scanner.scan(String[]) 方法，完成扫描
 				String[] packages = Constants.COMMA_SPLIT_PATTERN.split(annotationPackage);
 				Method scan = scannerClass.getMethod("scan", new Class<?>[] { String[].class });
 				scan.invoke(scanner, new Object[] { packages });
@@ -111,8 +117,10 @@ public class AnnotationBean extends ServiceInitializeListener implements Disposa
 		if (beanClass == null || !isMatchPackage(beanClass.getName())) {
 			return bean;
 		}
+		// 判断类定义中是否存在@Service注解
 		Service service = beanClass.getAnnotation(Service.class);
 		if (service != null) {
+			// 如果未自定义接口，则用当前beanClass
 			Class serviceInterface = service.interfaceClass();
 			if (void.class.equals(service.interfaceClass())) {
 				serviceInterface = ServiceConfigUtils.getServiceInterface(beanClass);
@@ -120,6 +128,7 @@ public class AnnotationBean extends ServiceInitializeListener implements Disposa
 			if (serviceInterface == null) {
 				serviceInterface = beanClass;
 			}
+			// 初始化ProviderConfig和ServerConfig，完成服务提供者配置和服务器配置的初始化
 			ProviderConfig<Object> providerConfig = new ProviderConfig<Object>(serviceInterface, bean);
 			providerConfig.setService(bean);
 			providerConfig.setUrl(service.url());
@@ -132,8 +141,10 @@ public class AnnotationBean extends ServiceInitializeListener implements Disposa
 			serverConfig.setSuffix(service.group());
 			serverConfig.setAutoSelectPort(service.autoSelectPort());
 			providerConfig.setServerConfig(serverConfig);
+			// 注册服务提供者，启动服务器，发布服务，完成pigeon提供方调用初始化
 			ServiceFactory.addService(providerConfig);
 		}
+		// 解析bean中方法和属性是否包含Reference，完成bean作为服务调用方的依赖注入。
 		postProcessBeforeInitialization(bean, beanName);
 		return bean;
 	}

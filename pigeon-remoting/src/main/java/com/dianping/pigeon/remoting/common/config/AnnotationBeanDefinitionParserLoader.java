@@ -20,6 +20,7 @@ public class AnnotationBeanDefinitionParserLoader implements BeanDefinitionParse
 	@Override
 	public Map<String, BeanDefinitionParser> loadBeanDefinitionParsers() {
 		Map<String, BeanDefinitionParser> parsers = new HashMap<String, BeanDefinitionParser>();
+		// 初始化AnnotationBeanDefinitionParser,加入集合中
 		parsers.put("annotation", new AnnotationBeanDefinitionParser(AnnotationBean.class, false));
 		return parsers;
 	}

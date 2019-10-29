@@ -45,21 +45,28 @@ public class AnnotationBeanDefinitionParser implements BeanDefinitionParser {
 		return parse(element, parserContext, beanClass, required);
 	}
 
+	//解析配置
 	private static BeanDefinition parse(Element element, ParserContext parserContext, Class<?> beanClass,
 			boolean required) {
+		//创建一个RootBeanDefinition
 		RootBeanDefinition beanDefinition = new RootBeanDefinition();
+		//非懒加载
 		beanDefinition.setLazyInit(false);
 		String id = element.getAttribute("id");
 		if (StringUtils.isBlank(id)) {
 			id = "pigeonAnnotation_" + idCounter.incrementAndGet();
 		}
-
+		// 设置beanDefinition实例化时，具体的实现类是AnnotationBean
 		beanDefinition.setBeanClass(AnnotationBean.class);
 
+		// 获取xml配置的属性值，这里主要获取package属性，用来定义扫描的包空间
 		MutablePropertyValues properties = beanDefinition.getPropertyValues();
 		if (element.hasAttribute("package")) {
 			properties.addPropertyValue("package", resolveReference(element, "package"));
 		}
+
+		// 注册当前BeanDefinition到Spring容器BeanDefinition注册中心，
+        // 在后续初始化Spring容器Bean的时候，会初始化当前BeanDefinition对应的实例类AnnotationBean。
 		parserContext.getRegistry().registerBeanDefinition(id, beanDefinition);
 
 		return beanDefinition;

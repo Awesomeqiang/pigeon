@@ -56,6 +56,8 @@ public final class ExtensionLoader {
 	}
 
 	public static <T> List<T> newExtensionList(Class<T> clazz) {
+		// 在ServiceLoader.load的时候，根据传入的接口类，
+		// 遍历META-INF/services目录下的以该类命名的文件中的所有类，并实例化返回。
 		ServiceLoader<T> serviceLoader = ServiceLoader.load(clazz);
 		List<T> extensions = new ArrayList<T>();
 		for (T service : serviceLoader) {
